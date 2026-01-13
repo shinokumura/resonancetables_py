@@ -83,9 +83,9 @@ def parse_nuclide_name(n_string):
     return iso, metastable
 
 
-# --- メイン処理 ---
+
 def main():
-    # 対象とするカテゴリ（ディレクトリ名）
+    # follow the directory structure of https://github.com/arjankoning1/resonancetables/
     target_categories = ["resonance", "thermal", "macs"]
 
     with engine.begin() as conn:
@@ -94,29 +94,29 @@ def main():
             if not cat_dir.exists():
                 continue
 
-            # カテゴリIDの取得 (resonance, thermal, macs)
+            # category_id (resonance, thermal, macs)
             cat_id = get_or_create_id(conn, categories, categories.c.name, cat_name)
 
-            # reactionディレクトリ (D0, ng, na-g, nf 等) を巡回
+            # reaction dir
             for react_dir in cat_dir.iterdir():
                 if not react_dir.is_dir():
                     continue
                 
-                react_name = react_dir.name  # 例: D0, ng, na-g
+                react_name = react_dir.name  # e.g.: D0, ng, na-g
                 all_dir = react_dir / "all"
                 if not all_dir.exists():
                     continue
 
-                # 反応IDの取得
+                # get reaction_id
                 react_id = get_or_create_id(conn, reaction_types, reaction_types.c.name, react_name)
                 print(f"Processing: [{cat_name}] -> {react_name}")
 
                 for file_path in all_dir.glob("*.txt"):
-                    # 特定のファイルを除外
+                    # skip these files
                     if any(x in file_path.name for x in ["EXFOR", "selected"]):
                         continue
 
-                    # ソース名の抽出
+                    # extract source name
                     # 'jendl5.0_D0.txt' -> 'jendl5.0'
                     # 'Astral_macs.txt' -> 'Astral'
                     source_raw = file_path.stem.split('_')[0]
@@ -127,7 +127,7 @@ def main():
                     with open(file_path, 'r', encoding='utf-8') as f:
                         for line in f:
                             line = line.strip()
-                            # ヘッダーや空行をスキップ
+                            # skip headers
                             if not line or line.startswith(('#', 'Z', '[')):
                                 continue
                             
@@ -135,7 +135,7 @@ def main():
                             if not data:
                                 continue
 
-                            # 核種情報の抽出とID取得
+
                             iso, m_state = parse_nuclide_name(data['name'])
                             nuc_id = get_or_create_nuclide(
                                 conn, 
@@ -151,16 +151,15 @@ def main():
                                 "source_id": source_id,
                                 "category_id": cat_id,
                                 "reaction_id": react_id,
-                                "quantity_type": react_name, # 必要に応じて保持
+                                "quantity_type": react_name, 
                                 "liso": data['liso'],
                                 "value": data['value'],
                                 "dvalue": data['dvalue'],
                                 "ratio": data['ratio']
                             })
                     
-                    # バルクインサート
+                    # bulk insert
                     if records_to_insert:
-                        # resonance_parameters から名称変更した nuclear_data 等のテーブル名に合わせてください
                         conn.execute(data_table.insert(), records_to_insert)
                         print(f"  Loaded {len(records_to_insert)} entries from {file_path.name}")
 

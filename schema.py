@@ -4,16 +4,16 @@ from config import engine
 
 metadata = MetaData()
 
-# --- テーブル定義 (SQLAlchemy Core) ---
+
 nuclides = Table(
     "nuclides",
     metadata,
     Column("nuclide_id", Integer, primary_key=True),
     Column("Z", Integer, nullable=False),
     Column("A", Integer, nullable=False),
-    Column("Iso", String, nullable=False),      # 例: Na, Hf
-    Column("nuclide", String, nullable=False),   # 例: Na023, Hf178n
-    Column("metastable", Integer, default=0),   # 0:基底, 1:m1, 2:m2...
+    Column("Iso", String, nullable=False),      # e.g.: Na, Hf
+    Column("nuclide", String, nullable=False),   # e.g.: Na023, Hf178n
+    Column("metastable", Integer, default=0),   # 0:ground, 1:m1, 2:m2...
     UniqueConstraint("Z", "A", "metastable", name="uq_nuclide"),
 )
 
@@ -43,8 +43,6 @@ data_table = Table(
     Column('category_id', Integer, ForeignKey('categories.id')),
     Column('reaction_id', Integer, ForeignKey('reaction_types.id')),
     
-    # 元々の quantity_type (D0, S0, etc.) も保持。
-    # thermal等の場合は 'thermal_value' など識別子として利用。
     Column('quantity_type', String), 
     
     Column('liso', Integer),
